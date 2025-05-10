@@ -5,6 +5,11 @@ use statrs::statistics::Statistics;
 use std::cell::OnceCell;
 use std::cmp::Ordering;
 
+/// Represent 1-d histogram consisting of bins and their respective counts.
+///
+/// The bins are characterized by their left edge so the uppermost bin is open to infinity by default.
+/// Furthermore, the values smaller than the minimal bin edge are ignored.
+/// The length of `counts` and `bins` has to be the same.
 #[derive(Debug)]
 pub struct Histogram {
     counts: Vec<u64>,
@@ -21,6 +26,7 @@ impl Histogram {
     }
 }
 
+/// Order a vector of floats. If partial comaprison fails (ie because there is a NaN value), the behaviour is undefined.
 fn to_ordered_floats(v: &Vec<f64>) -> Vec<f64> {
     v.into_iter()
         .sorted_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
@@ -28,18 +34,25 @@ fn to_ordered_floats(v: &Vec<f64>) -> Vec<f64> {
         .collect()
 }
 
+/// Find the min of a vector of floats. If partial comaprison fails (ie because there is a NaN value), the behaviour is undefined.
 pub fn min_from_float_vec(v: &Vec<f64>) -> f64 {
     *v.into_iter()
         .min_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
         .expect("Vector must not be empty")
 }
 
+/// Find the max of vector of floats. If partial comaprison fails (ie because there is a NaN value), the behaviour is undefined.
 pub fn max_from_float_vec(v: &Vec<f64>) -> f64 {
     *v.into_iter()
         .max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
         .expect("Vector must not be empty")
 }
 
+/// Build a histogram by counting how many entries of `data` fall into each of the bins.
+/// Data must not contian any NaNs. If it does, the behavior is unspecified.
+/// The bins are defined by their left edge.
+/// Every data point that is smaller than the left-most (ie minimal) bin edge is ignored.
+/// Bin edges are inclusive.
 pub fn histogram(data: &Vec<f64>, left_bin_edges: &Vec<f64>) -> Histogram {
     let sorted_bins = to_ordered_floats(left_bin_edges);
     let mut hist_out = vec![0; sorted_bins.len()];
@@ -48,7 +61,7 @@ pub fn histogram(data: &Vec<f64>, left_bin_edges: &Vec<f64>) -> Histogram {
 
     'data_loop: for &point in data {
         if point <= lower_bound {
-            // ignore everything left of the first bin edge
+            // ignore everything left and up to of the first bin edge
             continue 'data_loop;
         }
 
@@ -70,11 +83,15 @@ pub fn histogram(data: &Vec<f64>, left_bin_edges: &Vec<f64>) -> Histogram {
     };
 }
 
+/// Create a vector with length `n` and values equally spaced between `lower` and `upper`.
+/// The first value in the vector is always `lower` and `upper` is always strictly bigger than the last entry in the vector.
 pub fn linspace_vector(lower: f64, upper: f64, n: usize) -> Vec<f64> {
     let dx = (upper - lower) / (n - 1) as f64;
     (0..n - 1).map(|i| lower + i as f64 * dx).collect()
 }
 
+/// Create a vector starting at `start` and increasing by `step` to generate the next element until `stop` is reached.
+/// The first value in the vector is always `start` and `stop` is always strictly bigger than the last entry in the vector.
 pub fn linspace_vector_from_step(start: f64, stop: f64, step: f64) -> Vec<f64> {
     assert!(stop > start, "start must be bigger than stop.");
     assert!(step > 0., "The step must be positive.");
@@ -83,16 +100,21 @@ pub fn linspace_vector_from_step(start: f64, stop: f64, step: f64) -> Vec<f64> {
     (0..n + 1).map(|i| start + i as f64 * step).collect()
 }
 
+/// Construct bins for the given data that reflect the square root bin choice
 fn square_root_choice_bins(data: &Vec<f64>) -> Vec<f64> {
     let n_bins = (data.len() as f64).sqrt().floor() as usize;
     linspace_vector(data.min(), data.max(), n_bins + 1)
 }
 
+/// Cosntruct a histogram of the data using approximately square root of `data.len()` equidistant bins.
+/// This choice for bins is called the square-root choice.
 pub fn histogram_sqt_choice(data: &Vec<f64>) -> Histogram {
     let bins = square_root_choice_bins(data);
     histogram(data, &bins)
 }
 
+/// Fit a linear model y = m*x + q + eps using least squares.
+/// Fails if there are NaNs or there is perfect colinearity.
 pub fn least_squares_lin_fit(x: &Vec<f64>, y: &Vec<f64>) -> Option<(f64, f64)> {
     // TODO: maybe replace this by a call to a dedicated package
     let x_vec = nalgebra::DVector::from((*x).clone());
@@ -106,12 +128,19 @@ pub fn least_squares_lin_fit(x: &Vec<f64>, y: &Vec<f64>) -> Option<(f64, f64)> {
     Some((fitted_params[(0, 0)], fitted_params[(1, 0)]))
 }
 
+/// Wrapper around `std::cell::OnceCell` that implements serialization and deserialization using serde.
+///
+/// An uninitialised cell is serialised as `None` and an initialised one as `Some(<cell_value>)`.
+/// The serializing trait is implemented explicitly.
+/// The desarialization is achieved using the serde `from` macro. This is enabled by providing a From method casting an `Option` to a `OnceCell`.
 #[derive(Debug, PartialEq, Deserialize)]
 #[serde(from = "Option<T>")]
 pub struct SerdeOnceCell<T: Serialize + std::fmt::Debug> {
     cell: OnceCell<T>,
 }
 
+/// Serialize `self.cell` by converting it to an `Option`.
+/// An initialized cell is serialized as `Some` an uninitialized one as `None`.
 impl<T: Serialize + std::fmt::Debug> Serialize for SerdeOnceCell<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -124,6 +153,8 @@ impl<T: Serialize + std::fmt::Debug> Serialize for SerdeOnceCell<T> {
     }
 }
 
+/// This allows for building a `SerdeOnceCell` form an `Option`.
+/// Such a cast is implicitly used in the deserialization thorugh the `from` macro.
 impl<T: Serialize + std::fmt::Debug> From<Option<T>> for SerdeOnceCell<T> {
     fn from(value: Option<T>) -> Self {
         let new_cell = SerdeOnceCell::new();
@@ -136,6 +167,8 @@ impl<T: Serialize + std::fmt::Debug> From<Option<T>> for SerdeOnceCell<T> {
     }
 }
 
+/// These are trivial wrappers around the `OnceCell` functionality.
+/// See the documentation of `std::cell::OnceCell` for explanations.
 impl<T: Serialize + std::fmt::Debug> SerdeOnceCell<T> {
     pub fn new() -> Self {
         SerdeOnceCell {
