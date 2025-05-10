@@ -1,6 +1,8 @@
 use itertools::Itertools;
 use nalgebra;
+use serde::{Deserialize, Serialize};
 use statrs::statistics::Statistics;
+use std::cell::OnceCell;
 use std::cmp::Ordering;
 
 #[derive(Debug)]
@@ -92,6 +94,7 @@ pub fn histogram_sqt_choice(data: &Vec<f64>) -> Histogram {
 }
 
 pub fn least_squares_lin_fit(x: &Vec<f64>, y: &Vec<f64>) -> Option<(f64, f64)> {
+    // TODO: maybe replace this by a call to a dedicated package
     let x_vec = nalgebra::DVector::from((*x).clone());
     let y_vec = nalgebra::DVector::from((*y).clone());
     let ones = nalgebra::DVector::repeat(x.len(), 1.);
@@ -103,9 +106,63 @@ pub fn least_squares_lin_fit(x: &Vec<f64>, y: &Vec<f64>) -> Option<(f64, f64)> {
     Some((fitted_params[(0, 0)], fitted_params[(1, 0)]))
 }
 
+#[derive(Debug, PartialEq, Deserialize)]
+#[serde(from = "Option<T>")]
+pub struct SerdeOnceCell<T: Serialize + std::fmt::Debug> {
+    cell: OnceCell<T>,
+}
+
+impl<T: Serialize + std::fmt::Debug> Serialize for SerdeOnceCell<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self.get() {
+            Some(inner_value) => serializer.serialize_some(inner_value),
+            None => serializer.serialize_none(),
+        }
+    }
+}
+
+impl<T: Serialize + std::fmt::Debug> From<Option<T>> for SerdeOnceCell<T> {
+    fn from(value: Option<T>) -> Self {
+        let new_cell = SerdeOnceCell::new();
+        if let Some(inner_value) = value {
+            new_cell
+                .set(inner_value)
+                .expect("Value of new cell should never be set.");
+        }
+        new_cell
+    }
+}
+
+impl<T: Serialize + std::fmt::Debug> SerdeOnceCell<T> {
+    pub fn new() -> Self {
+        SerdeOnceCell {
+            cell: OnceCell::new(),
+        }
+    }
+
+    pub fn get(&self) -> Option<&T> {
+        self.cell.get()
+    }
+
+    pub fn get_or_init<F>(&self, f: F) -> &T
+    where
+        F: FnOnce() -> T,
+    {
+        self.cell.get_or_init(f)
+    }
+
+    pub fn set(&self, value: T) -> Result<(), T> {
+        self.cell.set(value)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use core::f64;
+    use serde_test::{assert_tokens, Token};
     use std::iter::zip;
 
     use super::*;
@@ -267,5 +324,56 @@ mod test {
             Some(_) => panic!("Expected no result in perfectly colinear case."),
             None => (),
         };
+    }
+
+    #[test]
+    fn once_cell_serde_int_empty() {
+        let cell = SerdeOnceCell::<i32>::new();
+
+        assert_tokens(&cell, &[Token::None]);
+    }
+
+    #[test]
+    fn once_cell_serde_vec_empty() {
+        let cell = SerdeOnceCell::<Vec<f64>>::new();
+
+        assert_tokens(&cell, &[Token::None]);
+    }
+
+    #[test]
+    fn once_cell_serde_i64() {
+        let cell = SerdeOnceCell::<i64>::new();
+        cell.set(12).unwrap();
+
+        assert_tokens(&cell, &[Token::Some, Token::I64(12)]);
+    }
+
+    #[test]
+    fn once_cell_serde_vec() {
+        let cell = SerdeOnceCell::<Vec<f64>>::new();
+        cell.set(vec![0., 1.2, 3., -12., 0.99, -111.22]).unwrap();
+
+        assert_tokens(
+            &cell,
+            &[
+                Token::Some,
+                Token::Seq { len: Some(6) },
+                Token::F64(0.),
+                Token::F64(1.2),
+                Token::F64(3.),
+                Token::F64(-12.),
+                Token::F64(0.99),
+                Token::F64(-111.22),
+                Token::SeqEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn once_cell_serde_string() {
+        let cell = SerdeOnceCell::<String>::new();
+        cell.set(String::from("This is a test ...?")).unwrap();
+
+        assert_tokens(&cell, &[Token::Some, Token::String("This is a test ...?")]);
     }
 }

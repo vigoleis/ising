@@ -2,9 +2,10 @@ use crate::lattice::{Lattice, SupportsWolfAlgorithm, K_BOLTZMANN};
 use crate::monte_carlo::mc_results::MonteCarloResult;
 use crate::monte_carlo::MonteCarloSettings;
 use rand::distr::{Bernoulli, Distribution};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashSet, VecDeque};
 
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ClusterFlipSettings {
     num_warmup_cluster_flips: u32,
     num_cluster_flips_between: u32,

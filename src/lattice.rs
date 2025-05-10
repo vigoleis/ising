@@ -12,7 +12,7 @@ pub trait Lattice {
     type Idx: Copy + PartialEq + Eq + Hash + Debug;
 
     fn number_sites(&self) -> usize;
-    
+
     fn linear_system_size(&self) -> usize;
 
     fn sum_neighbouring_spins(&self, flip_idx: Self::Idx) -> f64;

@@ -2,6 +2,8 @@ use super::mc_results;
 use super::MonteCarloSettings;
 use crate::lattice::{Lattice, K_BOLTZMANN};
 use rand;
+use serde::Deserialize;
+use serde::Serialize;
 
 fn mrt2_prob(delta_energy: f64, temperature: f64) -> f64 {
     f64::min(1.0, (-delta_energy / (K_BOLTZMANN * temperature)).exp())
@@ -22,7 +24,7 @@ fn glauber_dynamics<L: Lattice>(current_lattice: &L, flip_idx: L::Idx, temperatu
     glauber_prob(neighbouring_spins, temperature)
 }
 
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum SpinFlipAcceptanceAlgorithm {
     #[default]
     MRT2,
@@ -38,7 +40,7 @@ impl SpinFlipAcceptanceAlgorithm {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct SingleSpinFlipSettings {
     num_warmup_sweeps: u32,
     num_sweeps_between: u32,

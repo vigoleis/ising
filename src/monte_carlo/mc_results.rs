@@ -1,10 +1,12 @@
-use std::cell::OnceCell;
-
 use crate::lattice::K_BOLTZMANN;
 use crate::monte_carlo::MonteCarloSettings;
 use num_traits::abs;
 use num_traits::Pow;
+use serde::Deserialize;
+use serde::Serialize;
 use statrs::statistics::Statistics;
+
+use crate::utils::SerdeOnceCell;
 
 fn apply_to_each_element(vec_of_vecs: &Vec<Vec<f64>>, func: impl Fn(&Vec<f64>) -> f64) -> Vec<f64> {
     vec_of_vecs.iter().map(|v| func(v)).collect()
@@ -27,7 +29,7 @@ fn binder_cumulant(magnestisatoin_sample: &Vec<f64>) -> f64 {
         / (3. * magnestisatoin_sample.iter().map(|m| m.pow(2)).mean().pow(2))
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct MonteCarloResult {
     temperatures: Vec<f64>,
     sampled_magnetisations: Vec<Vec<f64>>,
@@ -37,11 +39,11 @@ pub struct MonteCarloResult {
     lattice_description: String,
     settings: MonteCarloSettings,
     // the following are caches for values that are calculated lazily
-    avg_abs_magnetisations: OnceCell<Vec<f64>>,
-    avg_energies: OnceCell<Vec<f64>>,
-    heat_capacities: OnceCell<Vec<f64>>,
-    magnetic_susceptibilites: OnceCell<Vec<f64>>,
-    binder_cumulant: OnceCell<Vec<f64>>,
+    avg_abs_magnetisations: SerdeOnceCell<Vec<f64>>,
+    avg_energies: SerdeOnceCell<Vec<f64>>,
+    heat_capacities: SerdeOnceCell<Vec<f64>>,
+    magnetic_susceptibilites: SerdeOnceCell<Vec<f64>>,
+    binder_cumulant: SerdeOnceCell<Vec<f64>>,
 }
 
 impl MonteCarloResult {
@@ -66,11 +68,11 @@ impl MonteCarloResult {
             linear_system_size,
             lattice_description,
             settings,
-            avg_abs_magnetisations: OnceCell::new(),
-            avg_energies: OnceCell::new(),
-            heat_capacities: OnceCell::new(),
-            magnetic_susceptibilites: OnceCell::new(),
-            binder_cumulant: OnceCell::new(),
+            avg_abs_magnetisations: SerdeOnceCell::new(),
+            avg_energies: SerdeOnceCell::new(),
+            heat_capacities: SerdeOnceCell::new(),
+            magnetic_susceptibilites: SerdeOnceCell::new(),
+            binder_cumulant: SerdeOnceCell::new(),
         }
     }
 

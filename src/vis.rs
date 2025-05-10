@@ -21,7 +21,7 @@ fn line_trace_from_func(
     upper: f64,
     n: usize,
 ) -> Box<Scatter<f64, f64>> {
-    let mut xx = utils::linspace_vector(lower, upper, n-1);
+    let mut xx = utils::linspace_vector(lower, upper, n - 1);
     xx.push(upper);
     let yy = xx.iter().map(|x| func(*x)).collect();
     Scatter::new(xx, yy).mode(Mode::Lines)
