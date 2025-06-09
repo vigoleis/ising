@@ -17,6 +17,12 @@ pub struct Histogram {
 }
 
 impl Histogram {
+
+    /// Retrieve the number of observations per bin ie the histogram contents.
+    /// The numbers are ordered from the smallest to the largest bin, ie the same order
+    /// as the bins that can be obtained from `get_left_bin_edges`.
+    /// The counts are expected to always have exactly as many entries as the bins.
+    /// This is achieved by ignoring every observation below the lowest bin bound.
     pub fn get_counts(&self) -> &Vec<u64> {
         &self.counts
     }
@@ -26,33 +32,12 @@ impl Histogram {
     }
 }
 
-/// Order a vector of floats. If partial comaprison fails (ie because there is a NaN value), the behaviour is undefined.
-fn to_ordered_floats(v: &Vec<f64>) -> Vec<f64> {
-    v.into_iter()
-        .sorted_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
-        .map(|i| *i)
-        .collect()
-}
-
-/// Find the min of a vector of floats. If partial comaprison fails (ie because there is a NaN value), the behaviour is undefined.
-pub fn min_from_float_vec(v: &Vec<f64>) -> f64 {
-    *v.into_iter()
-        .min_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
-        .expect("Vector must not be empty")
-}
-
-/// Find the max of vector of floats. If partial comaprison fails (ie because there is a NaN value), the behaviour is undefined.
-pub fn max_from_float_vec(v: &Vec<f64>) -> f64 {
-    *v.into_iter()
-        .max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
-        .expect("Vector must not be empty")
-}
-
 /// Build a histogram by counting how many entries of `data` fall into each of the bins.
 /// Data must not contian any NaNs. If it does, the behavior is unspecified.
-/// The bins are defined by their left edge.
-/// Every data point that is smaller than the left-most (ie minimal) bin edge is ignored.
+/// The bins are defined by their left edge. The bins do not have to be ordered.
 /// Bin edges are inclusive.
+/// Every data point that is smaller than the left-most (ie minimal) bin edge is ignored.
+/// If you want to have a first bin that is open to the left, use `f64::NEG_INFINITY` as first bin edge.
 pub fn histogram(data: &Vec<f64>, left_bin_edges: &Vec<f64>) -> Histogram {
     let sorted_bins = to_ordered_floats(left_bin_edges);
     let mut hist_out = vec![0; sorted_bins.len()];
@@ -81,6 +66,28 @@ pub fn histogram(data: &Vec<f64>, left_bin_edges: &Vec<f64>) -> Histogram {
         counts: hist_out,
         left_bin_edges: sorted_bins,
     };
+}
+
+/// Order a vector of floats. If partial comaprison fails (ie because there is a NaN value), the behaviour is undefined.
+fn to_ordered_floats(v: &Vec<f64>) -> Vec<f64> {
+    v.into_iter()
+        .sorted_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
+        .map(|i| *i)
+        .collect()
+}
+
+/// Find the min of a vector of floats. If partial comaprison fails (ie because there is a NaN value), the behaviour is undefined.
+pub fn min_from_float_vec(v: &Vec<f64>) -> f64 {
+    *v.into_iter()
+        .min_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
+        .expect("Vector must not be empty")
+}
+
+/// Find the max of vector of floats. If partial comaprison fails (ie because there is a NaN value), the behaviour is undefined.
+pub fn max_from_float_vec(v: &Vec<f64>) -> f64 {
+    *v.into_iter()
+        .max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
+        .expect("Vector must not be empty")
 }
 
 /// Create a vector with length `n` and values equally spaced between `lower` and `upper`.

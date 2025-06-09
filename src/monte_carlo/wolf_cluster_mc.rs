@@ -81,7 +81,7 @@ fn wolf_monte_carlo_for_temperature<L: SupportsWolfAlgorithm, R: rand::Rng + ?Si
 ) -> (L, Vec<f64>, Vec<f64>) {
     let mut current_lattice = current_lattice;
     let inclusion_probability =
-        wolf_probability(current_lattice.get_pots_interaction(), temperature);
+        wolf_probability(current_lattice.get_potts_interaction(), temperature);
     let inclusion_dist = Bernoulli::new(inclusion_probability).unwrap();
 
     for _ in 0..settings.num_warmup_cluster_flips {

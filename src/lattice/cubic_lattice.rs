@@ -150,7 +150,7 @@ impl SupportsWolfAlgorithm for CubicLattice {
             .into_iter()
     }
 
-    fn get_pots_interaction(&self) -> f64 {
+    fn get_potts_interaction(&self) -> f64 {
         2. * self.interaction
     }
 }

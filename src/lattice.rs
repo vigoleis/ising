@@ -26,7 +26,7 @@ pub trait Lattice {
 
     /// Sum the "spins" of the nearest neighbours of a given site. The site is defined by its index.
     /// This funcion basically defines the geometry of the graph we work on.
-    /// For example, in a square lattice with nearest neighbour interaction only, there will always be 4 neighbouring spins. 
+    /// For example, in a square lattice with nearest neighbour interaction only, there will always be 4 neighbouring spins.
     fn sum_neighbouring_spins(&self, flip_idx: Self::Idx) -> f64;
 
     /// Calculate the change in total energy of the system if the spin at `flip_idx` is flipped.
@@ -39,20 +39,20 @@ pub trait Lattice {
     fn flip(self, flip_idx: Self::Idx) -> Self;
 
     /// Return the current value of the spin at the given index.
-    /// Note: as of now, we only handle models where the state of a site can be described by a small integer. 
+    /// Note: as of now, we only handle models where the state of a site can be described by a small integer.
     fn idx_into(&self, idx: Self::Idx) -> i8;
 
     /// Select a valid index of the lattice at random using the given rng.
     fn draw_random_index<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> <Self as Lattice>::Idx;
 
     /// Collect all valid indices of the lattice. They then allow to iterate through the lattice sites without having
-    /// to know how they are represented internally. 
+    /// to know how they are represented internally.
     fn get_all_indices(&self) -> Vec<Self::Idx>;
 
     /// Calculate the sum of all spins in the lattice.
     fn get_sum_of_spins(&self) -> i64;
 
-    /// Calculate the average (ie per site) magnetisation in the current lattice state. 
+    /// Calculate the average (ie per site) magnetisation in the current lattice state.
     fn get_magnetisation(&self) -> f64 {
         (self.get_sum_of_spins() as f64) / (self.number_sites() as f64)
     }
@@ -74,8 +74,15 @@ pub trait Lattice {
     }
 }
 
+/// This trait is necessary if the lattice should be used with the Wolf cluster update algorithm.
+/// At the moment only models that can be re-formulated as Potts models are supported, see https://en.wikipedia.org/wiki/Potts_model#Standard_Potts_model.
 pub trait SupportsWolfAlgorithm: Lattice {
+    /// Iterate thorugh the neighbours of the site at the given index. The neighbours are all the sites
+    /// with which the current one interacts.
     fn iter_neighbours(&self, index: Self::Idx) -> impl Iterator<Item = <Self as Lattice>::Idx>;
 
-    fn get_pots_interaction(&self) -> f64;
+    /// The version of the Wolf algorithm we use is designed for the Pots model. Many other models (eg the Ising model)
+    /// can be formulated in terms of a Potts model. This method returns the interaction strength in the lattice when it is
+    /// re-formulated as Potts model.
+    fn get_potts_interaction(&self) -> f64;
 }
