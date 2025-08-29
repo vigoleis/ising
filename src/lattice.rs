@@ -47,7 +47,7 @@ pub trait Lattice {
 
     /// Collect all valid indices of the lattice. They then allow to iterate through the lattice sites without having
     /// to know how they are represented internally.
-    fn get_all_indices(&self) -> Vec<Self::Idx>;
+    fn get_all_indices(&self) -> Box<dyn Iterator<Item = Self::Idx>>;
 
     /// Calculate the sum of all spins in the lattice.
     fn get_sum_of_spins(&self) -> i64;

@@ -105,8 +105,8 @@ impl Lattice for TriangularLattice {
         self.sights[idx.0][idx.1]
     }
 
-    fn get_all_indices(&self) -> Vec<Self::Idx> {
-        iproduct!(0..self.width, 0..self.width).collect()
+    fn get_all_indices(&self) -> Box<dyn Iterator<Item = Self::Idx>> {
+        Box::new(iproduct!(0..self.width, 0..self.width))
     }
 
     fn draw_random_index<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> <Self as Lattice>::Idx {
@@ -310,7 +310,7 @@ mod tests {
     fn square_lattice_get_all_indices_3x3() {
         let test_lattice = TriangularLattice::new(3, 12.);
         assert_eq!(
-            test_lattice.get_all_indices(),
+            test_lattice.get_all_indices().collect::<Vec<_>>(),
             vec![
                 (0, 0),
                 (0, 1),

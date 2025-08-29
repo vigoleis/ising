@@ -169,7 +169,7 @@ mod test {
 
         // flip all the spins in the test and expected lattice
         expected_lattice = expected_lattice.flip_all();
-        let max_cluster = test_lattice.get_all_indices();
+        let max_cluster = test_lattice.get_all_indices().collect();
         let mut actual_lattice = flip_cluster(test_lattice, max_cluster);
 
         assert!(
@@ -179,7 +179,7 @@ mod test {
 
         // flip all the spins in the test and expected lattice once again
         expected_lattice = expected_lattice.flip_all();
-        let max_cluster = actual_lattice.get_all_indices();
+        let max_cluster = actual_lattice.get_all_indices().collect();
         actual_lattice = flip_cluster(actual_lattice, max_cluster);
 
         assert!(
